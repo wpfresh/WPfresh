@@ -218,7 +218,7 @@ if [ "$plugin" = "Co" ]; then
     cd /var/www/html/wp-content/plugins
 
     # MailChimp for WordPress
-    wget https://downloads.wordpress.org/plugin/mailchimp-for-wp.2.3.2.zip -O mailchimp.zip && unzip mailchimp.zip && rm mailchimp.zip
+    wget https://downloads.wordpress.org/plugin/mailchimp-for-wp.2.3.4.zip -O mailchimp.zip && unzip mailchimp.zip && rm mailchimp.zip
 
     # TinyMCE Advanced
     wget https://downloads.wordpress.org/plugin/tinymce-advanced.4.1.9.zip -O tinymce-advanced.zip && unzip tinymce-advanced.zip && rm tinymce-advanced.zip
@@ -242,7 +242,7 @@ if [ "$plugin" = "Co" ]; then
     wget https://downloads.wordpress.org/plugin/better-wp-security.4.6.13.zip -O wp-security.zip && unzip wp-security.zip && rm wp-security.zip
 
     # WP Smush - Image Optimization
-    wget https://downloads.wordpress.org/plugin/wp-smushit.2.0.5.zip -O wp-smushit.zip && unzip wp-smushit.zip && rm wp-smushit.zip
+    wget https://downloads.wordpress.org/plugin/wp-smushit.zip -O wp-smushit.zip && unzip wp-smushit.zip && rm wp-smushit.zip
 
     # WP-Optimize
     wget https://downloads.wordpress.org/plugin/wp-optimize.1.8.9.10.zip -O wp-optimize.zip && unzip wp-optimize.zip && rm wp-optimize.zip
