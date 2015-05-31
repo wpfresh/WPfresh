@@ -1,25 +1,56 @@
 #!/bin/bash
 
+#*------------------------------------*#
+    # Cấu hình các biến
+#*------------------------------------*#
+
+# Địa chỉ IP server VPS
 serverIP=$1
-servername=$2
+
+# Địa chỉ tên miền
+domain=$2
+
+# Địa chỉ trang web bạn muốn mọi người truy cập
 url=$3
+
+# Stack - Nền tảng web server
 stack=$4
+
+# Hệ quản trị cơ sở dữ liệu
 qtdb=$5
+
+# Password 'root' user
 msqlpassroot=$6
+
+# Database name
 mysqldb=$7
+
+# Database user
 mysqluser=$8
+
+# Password Database user
 mysqluserpass=$9
+
+# Tường lửa IPTables
 iptable=$10
+
+# Fail2ban
 fail2ban=$11
+
+# 2TA - Duo Unix cấu hình
 Integration_key=$12
 Secret_key=$13
 API_hostname=$14
 plugin=$15
 
-# Update
+#*------------------------------------*#
+    # Update
+#*------------------------------------*#
 apt-get update
 
-# Cài đặt SWAP
+#*------------------------------------*#
+    # Swap
+#*------------------------------------*#
 fallocate -l 1G /swapfile
 chmod 600 /swapfile
 mkswap /swapfile
@@ -30,21 +61,17 @@ echo "vm.swappiness=10" | tee -a /etc/sysctl.conf
 sysctl vm.vfs_cache_pressure=50
 echo "vm.vfs_cache_pressure=50" | tee -a /etc/sysctl.conf
 
-#---------------------------
-### ---- Auto save config Firewall IPTables
-#---------------------------
 
-# Chon Yes pop-up chap nhan save IPv4
+#*------------------------------------*#
+    # IPtables
+#*------------------------------------*#
 echo iptables-persistent iptables-persistent/autosave_v4 boolean true | sudo debconf-set-selections
-# Chon Yes pop-up chap nhan save IPv6
 echo iptables-persistent iptables-persistent/autosave_v6 boolean true | sudo debconf-set-selections
-# Install IPtables Persistent
 apt-get -y install iptables-persistent
 
-
-#---------------------------
-### ---- Firewall Rules
-#---------------------------
+    #---------------------------
+    ### ---- Firewall Rules
+    #---------------------------
 
 if [ "$iptable" = "Co" ]; then
     
@@ -79,13 +106,15 @@ if [ "$iptable" = "Co" ]; then
     /etc/init.d/iptables-persistent save
 fi
 
-# Fail2ban
+#*------------------------------------*#
+    # Fail2ban
+#*------------------------------------*#
 
 if [ "$fail2ban" = "Co" ]; then
-    # Install Fail2ban
+    # Cài đặt
     apt-get -y install fail2ban
     
-    # Configuration Fail2ban
+    # Cấu hình Fail2ban
     cp /etc/fail2ban/jail.conf /etc/fail2ban/jail.local
     sed -i "s/^bantime  = 600/bantime  = 3600/" /etc/fail2ban/jail.local
     sed -i "s/^findtime = 600/findtime = 300/" /etc/fail2ban/jail.local
@@ -93,15 +122,15 @@ if [ "$fail2ban" = "Co" ]; then
     sudo service fail2ban start
 fi
 
-#---------------------------
-### ---- Duo Unix - Two-Factor Authentication for SSH (DuoSecurity.com)
-#---------------------------
+#*------------------------------------*#
+    # Duo Unix - Two-Factor Authentication for SSH (DuoSecurity.com)
+#*------------------------------------*#
 
 if [ "$Integration_key" != 2 ] && [ "$Secret_key" != 2 ] && [ "$API_hostname" != 2 ]; then
-    #Install OpenSSL libpam
+    # Cài đặt OpenSSL
     apt-get -y install libssl-dev libpam-dev
     
-    # Download & Install
+    # Tải và cài đặt Duo Unix 
     wget https://dl.duosecurity.com/duo_unix-latest.tar.gz
     tar zxf duo_unix-latest.tar.gz
     rm -rf duo_unix-latest.tar.gz
@@ -109,25 +138,31 @@ if [ "$Integration_key" != 2 ] && [ "$Secret_key" != 2 ] && [ "$API_hostname" !=
     apt-get install -y make
     ./configure --prefix=/usr && make && sudo make install && cd
     
-    # Config login_duo.conf
+    # Cấu hình login_duo.conf
     sed -i "s/^ikey = /ikey = $Integration_key/" /etc/duo/login_duo.conf
     sed -i "s/^skey = /skey = $Secret_key/" /etc/duo/login_duo.conf
     sed -i "s/^host = /host = $API_hostname/" /etc/duo/login_duo.conf
     sed -i "s/^\# See the sshd_config(5) manpage for details/\# See the sshd_config(5) manpage for details\n\ForceCommand \/usr\/sbin\/login_duo\n\PermitTunnel no\n\AllowTcpForwarding no/" /etc/ssh/sshd_config
     
-    # Restart SSH service de dich vu hoat dong
+    # Khởi động lại SSH
     service ssh restart
 fi
 
-# HQT CSDL
+#*------------------------------------*#
+    # Hệ quản trị CSDL
+#*------------------------------------*#
 
 if [ "$qtdb" = "mysql" ]; then
-    # Install MySQL
+    #---------------------------
+    ### ---- Cài đặt MySQL
+    #---------------------------
     echo mysql-server mysql-server/root_password password $msqlpassroot | debconf-set-selections
     echo mysql-server mysql-server/root_password_again password $msqlpassroot | debconf-set-selections
     apt-get install -y mysql-server mysql-client
 else
-    # Install MariaDB
+    #---------------------------
+    ### ---- Cài đặt MariaDB
+    #---------------------------
     apt-get install -y software-properties-common
     apt-key adv --recv-keys --keyserver hkp://keyserver.ubuntu.com:80 0xcbcb082a1bb943db
     add-apt-repository 'deb http://sfo1.mirrors.digitalocean.com/mariadb/repo/10.0/ubuntu trusty main'
@@ -136,7 +171,11 @@ else
     echo mysql-server mysql-server/root_password_again password $msqlpassroot | debconf-set-selections
     apt-get install -y mariadb-server
 fi
-# Install Nginx
+
+
+#*------------------------------------*#
+    # Nginx
+#*------------------------------------*#
 add-apt-repository -y ppa:nginx/stable
 apt-get update
 apt-get install -y nginx
@@ -153,10 +192,12 @@ sed -i "s/^\t#location ~ \\\.php$ {/\n\tlocation ~ \\\.php$ {\n\t\ttry_files \$u
 ln -s /etc/nginx/sites-available/wordpress /etc/nginx/sites-enabled/
 rm /etc/nginx/sites-enabled/default
 
-# Stack
+#*------------------------------------*#
+    # Stack
+#*------------------------------------*#
 
 if [ "$stack" = "lemp" ]; then
-    # Install PHP-FPM & Extentions
+    # Cài đặt PHP-FPM & Extentions
     apt-get install -y php5-mysql php5-fpm php5-gd php5-cli php5-curl php5-mcrypt
 
     # php-mcrypt
@@ -164,14 +205,14 @@ if [ "$stack" = "lemp" ]; then
     php5enmod mcrypt
 
 
-    # Configuration PHP-FPM
+    # Cấu hình PHP-FPM
     sed -i "s/^;cgi.fix_pathinfo=1/cgi.fix_pathinfo=0/" /etc/php5/fpm/php.ini
     sed -i "s/^;listen.owner = www-data/listen.owner = www-data/" /etc/php5/fpm/pool.d/www.conf
     sed -i "s/^;listen.group = www-data/listen.group = www-data/" /etc/php5/fpm/pool.d/www.conf
     sed -i "s/^;listen.mode = 0660/listen.mode = 0660/" /etc/php5/fpm/pool.d/www.conf
 
 else
-    # Installs HHVM
+    # Cài đặt HHVM
     apt-get install software-properties-common
     apt-key adv --recv-keys --keyserver hkp://keyserver.ubuntu.com:80 0x5a16e7281be7a449
     add-apt-repository 'deb http://dl.hhvm.com/ubuntu vivid main'
@@ -181,25 +222,30 @@ else
     service hhvm restart
 fi
 
-# Restart Nginx, MySQL, PHP-FPM
+#*------------------------------------*#
+    # Khởi động lại
+#*------------------------------------*#
 service nginx restart
 service mysql restart
 service php5-fpm restart
 service hhvm restart
 
-# Create CSDL website
+#*------------------------------------*#
+    # Database cho website
+#*------------------------------------*#
 mysql -uroot -p$msqlpassroot -e "create database $mysqldb;"
 mysql -uroot -p$msqlpassroot -e "create user $mysqluser@localhost;"
 mysql -uroot -p$msqlpassroot -e "SET PASSWORD FOR $mysqluser@localhost= PASSWORD('$mysqluserpass');"
 mysql -uroot -p$msqlpassroot -e "GRANT ALL PRIVILEGES ON $mysqldb.* TO ${mysqluser}@localhost IDENTIFIED BY '$mysqluserpass';"
 mysql -uroot -p$msqlpassroot -e "FLUSH PRIVILEGES;"
 
-# Install Wordpress
+#*------------------------------------*#
+    # Cài đặt wordpress
+#*------------------------------------*#
 cd /var/www/html
 wget http://wordpress.org/latest.tar.gz
 tar -xvzf latest.tar.gz
 mv wordpress/* ./
-
 chown -R www-data:www-data *
 sed -e "s/database_name_here/"$mysqldb"/" -e "s/username_here/"$mysqluser"/" -e "s/password_here/"$mysqluserpass"/" wp-config-sample.php > wp-config.php
 apt-get install -y curl
@@ -210,7 +256,9 @@ rm -rf wordpress
 rm -rf latest.tar.gz
 chown -R www-data:www-data * && cd
 
-# Plugin
+#*------------------------------------*#
+    # Cài đặt Plugin
+#*------------------------------------*#
 if [ "$plugin" = "Co" ]; then
     # Install Plugin
     ################################
@@ -256,27 +304,39 @@ if [ "$plugin" = "Co" ]; then
     chown -R www-data:www-data * && cd
 fi
 
-# Redirect IP to URL:
+#*------------------------------------*#
+    # Chuyển hướng IP đến URL
+#*------------------------------------*#
 sed -i "s/^\# Default server configuration/\# Default server configuration\n\server {\n\tlisten 80;\n\tserver_name $serverIP;\n\treturn 301 \$scheme:\/\/$url\$request_uri;\n\}/" /etc/nginx/sites-available/wordpress
 
 # Redirect Domain to URL:
-if [ "$servername" != "$url" ]; then
-    sed -i "s/^\# Default server configuration/\# Default server configuration\n\server {\n\tlisten 80;\n\tserver_name $servername;\n\treturn 301 \$scheme:\/\/$url\$request_uri;\n\}/" /etc/nginx/sites-available/wordpress
+if [ "$domain" != "$url" ]; then
+    sed -i "s/^\# Default server configuration/\# Default server configuration\n\server {\n\tlisten 80;\n\tserver_name $domain;\n\treturn 301 \$scheme:\/\/$url\$request_uri;\n\}/" /etc/nginx/sites-available/wordpress
 fi
 
-
-# Change max upload to 50MB
+#*------------------------------------*#
+    # Thay đổi dung lượng upload lên 50MB thay vì 2MB như mặc định
+#*------------------------------------*#
 sed -i "s/^\ttypes_hash_max_size 2048;/\ttypes_hash_max_size 2048;\n\tclient_max_body_size 50M;/" /etc/nginx/nginx.conf
 sed -i "s/^upload_max_filesize = 2M/upload_max_filesize = 50M/" /etc/php5/fpm/php.ini
 
-# Restart Nginx, MySQL, PHP-FPM
+#*------------------------------------*#
+    # Khởi động lại
+#*------------------------------------*#
 service nginx restart
 service mysql restart
 service php5-fpm restart
 service hhvm restart
 
+#*------------------------------------*#
+    # Remove file cài đặt
+#*------------------------------------*#
 rm -rf wpfresh
 clear
+
+#*------------------------------------*#
+    # Cài đặt hoàn thành 
+#*------------------------------------*#
 echo "******************************************************************************************"
 echo "Qua trinh cai dat hoan thanh"
 echo "Truy cap vao IP hoac Domain de cai dat Wordpress Site va thuc hien cac buoc tiep theo"
